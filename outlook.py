@@ -35,7 +35,7 @@ class Outlook:
         with open(credentialsPath, 'rt') as fh:
             self.user = fh.readline()
             self.pwd = fh.readline()
-            print(self.user, self.pwd)
+            #print(self.user, self.pwd)
             
     def createRequestHeaders(self):
         # the below mess properly encodes the authorization string in Python 3:
@@ -58,7 +58,7 @@ class Outlook:
         myEventList = []
         for item in eventList:
             if item['Start'] < now:
-                print("Skipping event in the past (%s, %s)" % (item['Subject'], item['Start']))
+                #print("Skipping event in the past (%s, %s)" % (item['Subject'], item['Start']))
                 continue
             #print("Outlook Item %s, start %s, end %s" % (item['Subject'], item['Start'], item['End']))
             #if 'dateTime' not in item['start']: continue    # skip all-day events
@@ -71,7 +71,7 @@ class Outlook:
             event.location = item['Location']
             event.description = item['BodyPreview']
             #if 'description' in item: event.description = item['description']
-            print("Outlook Event %s, start %s, end %s" % (event.summary, event.start, event.end))
+            #print("Outlook Event %s, start %s, end %s" % (event.summary, event.start, event.end))
             myEventList.append(event)
         return myEventList
 
@@ -108,8 +108,8 @@ class Outlook:
         print(json_payload)
         headers = self.createRequestHeaders()
         r = requests.post(self.baseUrl, headers=headers, data=json_payload)
-        print("Outlook Event created: %s" % event.summary)
-        print(r.text)
+        #print("Outlook Event created: %s" % event.summary)
+        #print(r.text)
 
         
     def deleteEventFromCalendar(self, event):
