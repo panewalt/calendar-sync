@@ -189,7 +189,7 @@ def main():
             event = timeslotEvents[primaryEventCalendarID]
             start = event.start
             end = event.end
-            print("Primary Calendar for event: %s (%s)" % (primaryEventCalendarID, event.subject))
+            print("Primary Calendar for event: %s (%s)" % (primaryEventCalendarID, event.summary))
             for ID in calendars:
                 cal = calendars[ID]
                 if ID in placeholderSet:     # this calendar needs a placeholder

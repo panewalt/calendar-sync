@@ -50,7 +50,7 @@ class Outlook:
         then = (datetime.utcnow().replace(microsecond=0) + timedelta(days=daysAhead)).isoformat() + 'Z'
         #url = "https://outlook.office365.com/api/v1.0/me/events?$Select=Subject,Start,End,Location&start=%s&end=%s" % (now, then)
         url = "https://outlook.office365.com/api/v1.0/me/calendarView?$Select=Subject,Start,End,Location,BodyPreview&$top=250&startDateTime=%s&endDateTime=%s" % (now, then)
-        print(url)
+        #print(url)
         r = requests.get(url, headers=headers)
         returnDict = json.loads(r.text)
         eventList = returnDict['value']
@@ -105,7 +105,7 @@ class Outlook:
             OutlookEvent['Location'] = event.location
 
         json_payload = json.dumps(OutlookEvent)
-        print(json_payload)
+        #print(json_payload)
         headers = self.createRequestHeaders()
         r = requests.post(self.baseUrl, headers=headers, data=json_payload)
         #print("Outlook Event created: %s" % event.summary)
@@ -116,7 +116,7 @@ class Outlook:
         eventID = event.ID
         headers = self.createRequestHeaders()
         url = "%s/%s" % (self.baseUrl, eventID)
-        print(url)
+        #print(url)
         r = requests.delete(url, headers=headers)
         #print("Calendar %s: Deleted Event %s" % (self.ID, eventID))
 
