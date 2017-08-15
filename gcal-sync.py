@@ -70,7 +70,7 @@ class GCal:
     def getEventsFromCalendar(self, daysAhead=30):
         now = datetime.utcnow().isoformat() + 'Z' # 'Z' indicates UTC time
         then = (datetime.utcnow() + timedelta(days=daysAhead)).isoformat() + 'Z'
-        print('Getting the upcoming events for calendar %s' % self.ID)
+        #print('Getting the upcoming events for calendar %s' % self.ID)
         eventResult = self.service.events().list(
             calendarId='primary', timeMin=now, timeMax=then, singleEvents=True,
             orderBy='startTime').execute()
@@ -153,7 +153,7 @@ def main():
             cal['instance'] = Outlook(ID=ID, credentialsFile=cal['creds_file'])
         cal['eventList'] = cal['instance'].getEventsFromCalendar(daysAhead=30)
         eventsRetrieved = len(cal['eventList'])
-        print("Retrieved %d entries from Calendar %s" % (eventsRetrieved, ID))
+        print("Calendar %s: Retrieved %d entries" % (ID, eventsRetrieved))
         if eventsRetrieved == 0:
             print("Exiting on 0 events retrieved from Calendar %s" % ID)
         masterEventList = addEventsToMaster(cal['eventList'], ID, masterEventList)
@@ -180,7 +180,7 @@ def main():
                     primaryEventCalendarID = ID
 
         if len(placeholderSet) == 0:
-            print("Timeslot %s has events for all calendars, continuing...." % timeslot)
+            #print("Timeslot %s has events for all calendars, continuing...." % timeslot)
             continue
             
         if primaryEventCalendarID:
