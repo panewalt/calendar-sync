@@ -147,6 +147,7 @@ def main():
     totalCalendars = len(calendars)
     masterEventList = {}
 
+    print("Running at %s" % datetime.now())
     for ID in calendars:
         cal = calendars[ID]
         if cal['type'] == 'Google':
