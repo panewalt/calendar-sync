@@ -57,9 +57,9 @@ class Outlook:
 
         myEventList = []
         for item in eventList:
-            if item['Start'] < now:
+            #if item['Start'] < now:
                 #print("Skipping event in the past (%s, %s)" % (item['Subject'], item['Start']))
-                continue
+            #    continue
             #print("Outlook Item %s, start %s, end %s" % (item['Subject'], item['Start'], item['End']))
             #if 'dateTime' not in item['start']: continue    # skip all-day events
             #print(item)
