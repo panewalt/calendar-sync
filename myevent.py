@@ -21,12 +21,13 @@ class MyEvent:
      
 
     def createPlaceholderEvent(self, ID, start, end):
-        summary = "<%s> Busy" % ID
-        self.createEvent(ID='', summary=summary, start=start, end=end)
+        newSummary = "<%s> Busy" % ID
+        self.createEvent(ID='', summary=newSummary, start=start, end=end)
 
     def createCopyOfEvent(self, ID, event):
-        summary = "<%s> %s" % (ID, event.summary)
-        self.createEvent(ID=event.ID, summary=summary, location=event.location, description=event.description, start=event.start, end=event.end)
+        newSummary = "<%s> %s" % (ID, event.summary)
+        self.createEvent(ID=event.ID, summary=newSummary, location=event.location, description=event.description, start=event.start, end=event.end)
+        print("Event Copied - Summary: %s, Start: %s, End: %s, Location: %s" % (self.summary, self.start, self.end, self.location))
         #return newEvent
         
     def convertUTCtoLocalDatetime(self, s):

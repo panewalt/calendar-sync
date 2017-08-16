@@ -62,13 +62,14 @@ class Outlook:
                 continue
             #print("Outlook Item %s, start %s, end %s" % (item['Subject'], item['Start'], item['End']))
             #if 'dateTime' not in item['start']: continue    # skip all-day events
+            #print(item)
             event = MyEvent()
             event.ID = item['Id']
             event.summary = item['Subject']
             # Outlook dates are provided in UTC.  Convert to local-aware datetime.
             event.start = event.convertUTCtoLocalDatetime(item['Start'])
             event.end = event.convertUTCtoLocalDatetime(item['End'])
-            event.location = item['Location']
+            event.location = item['Location']['DisplayName']
             event.description = item['BodyPreview']
             #if 'description' in item: event.description = item['description']
             #print("Outlook Event %s, start %s, end %s" % (event.summary, event.start, event.end))

@@ -80,6 +80,7 @@ class GCal:
         for item in eventList:
             #print("Google Event %s, start %s, end %s" % (item['summary'], item['start'], item['end']))
             if 'dateTime' not in item['start']: continue    # skip all-day events
+            #print("%s: %s" % (self.ID, item))
             event = MyEvent()
             event.ID = item['id']
             event.summary = item['summary']
@@ -87,7 +88,7 @@ class GCal:
             event.end = item['end']['dateTime']
             if 'location' in item: event.location = item['location']
             if 'description' in item: event.description = item['description']
-            #print("Event %s, start %s, end %s" % (event.summary, event.start, event.end))
+            #print("Calendar: %s, Event %s, start %s, end %s, Location: %s" % (self.ID, event.summary, event.start, event.end, event.location))
             myEventList.append(event)
         return myEventList
 
@@ -100,6 +101,7 @@ class GCal:
         GCalEvent['start']['dateTime'] = event.start    #datetime.strptime(event.start, "%Y-%m-%dT%H:%M:%S")
         GCalEvent['end'] = {}
         GCalEvent['end']['dateTime'] = event.end    #datetime.strptime(event.end, "%Y-%m-%dT%H:%M:%S")
+        GCalEvent['location'] = event.location
         event = self.service.events().insert(calendarId='primary', body=GCalEvent).execute()
         return event
 
