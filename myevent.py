@@ -27,7 +27,7 @@ class MyEvent:
     def createCopyOfEvent(self, ID, event):
         newSummary = "<%s> %s" % (ID, event.summary)
         self.createEvent(ID=event.ID, summary=newSummary, location=event.location, description=event.description, start=event.start, end=event.end)
-        print("Event Copied - Summary: %s, Start: %s, End: %s, Location: %s" % (self.summary, self.start, self.end, self.location))
+        #print("Event Copied - Summary: %s, Start: %s, End: %s, Location: %s" % (self.summary, self.start, self.end, self.location))
         #return newEvent
         
     def convertUTCtoLocalDatetime(self, s):

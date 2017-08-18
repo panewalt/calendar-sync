@@ -17,13 +17,13 @@ from myevent import MyEvent
 # so Outlook events get converted from UTC to local times.
 # Once done, we can create new events in here using the local times.
 
-class Outlook:
-    def __init__(self, ID, credentialsFile=None):
+class OutlookCalendar:
+    def __init__(self, calID, credentialsFile=None):
         # Set the request parameters - this URL is the main URL for creating and deleting events
         # it also works for getting events, but I found that the calendarView function is better, because it allows dates to be specified.
         # so that one is defined below, in getEventsFromCalendar.
         self.baseUrl = 'https://outlook.office365.com/api/v1.0/me/events'
-        self.ID = ID
+        self.calID = calID
         self.getCredentials(credentialsFile)
 
     def getCredentials(self, credentialsFile):
@@ -64,6 +64,7 @@ class Outlook:
             #if 'dateTime' not in item['start']: continue    # skip all-day events
             #print(item)
             event = MyEvent()
+            event.calID = self.calID
             event.ID = item['Id']
             event.summary = item['Subject']
             # Outlook dates are provided in UTC.  Convert to local-aware datetime.

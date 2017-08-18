@@ -17,9 +17,9 @@ from datetime import datetime, timedelta
 import dateutil.parser
 
 from myevent import MyEvent
-from outlook import Outlook
+from outlook import OutlookCalendar
     
-class GCal:
+class GoogleCalendar:
     # class containing a Google calendar.
     # There will be several of these - we will consolidate events between them.
     # If modifying these scopes, delete your previously saved credentials
@@ -32,8 +32,8 @@ class GCal:
     # https://console.developers.google.com
     # credentialsFile for this calendar, stored in ~/.credentials
     
-    def __init__(self, ID, scope=None, appName=None, secretsFile=None, credentialsFile=None):
-        self.ID = ID
+    def __init__(self, calID, scope=None, appName=None, secretsFile=None, credentialsFile=None):
+        self.calID = calID
         if not scope: scope = 'https://www.googleapis.com/auth/calendar'      #.readonly
         if not appName: appName = "Calendar Sync"
         self.credentials = self.getCredentials(scope, appName, secretsFile, credentialsFile)
@@ -70,7 +70,7 @@ class GCal:
     def getEventsFromCalendar(self, daysAhead=30):
         now = datetime.utcnow().isoformat() + 'Z' # 'Z' indicates UTC time
         then = (datetime.utcnow() + timedelta(days=daysAhead)).isoformat() + 'Z'
-        #print('Getting the upcoming events for calendar %s' % self.ID)
+        #print('Getting the upcoming events for calendar %s' % self.calID)
         eventResult = self.service.events().list(
             calendarId='primary', timeMin=now, timeMax=then, singleEvents=True,
             orderBy='startTime').execute()
@@ -80,15 +80,16 @@ class GCal:
         for item in eventList:
             #print("Google Event %s, start %s, end %s" % (item['summary'], item['start'], item['end']))
             if 'dateTime' not in item['start']: continue    # skip all-day events
-            #print("%s: %s" % (self.ID, item))
+            #print("%s: %s" % (self.calID, item))
             event = MyEvent()
+            event.calID = self.calID
             event.ID = item['id']
             event.summary = item['summary']
             event.start = item['start']['dateTime']
             event.end = item['end']['dateTime']
             if 'location' in item: event.location = item['location']
             if 'description' in item: event.description = item['description']
-            #print("Calendar: %s, Event %s, start %s, end %s, Location: %s" % (self.ID, event.summary, event.start, event.end, event.location))
+            #print("Calendar: %s, Event %s, start %s, end %s, Location: %s" % (self.calID, event.summary, event.start, event.end, event.location))
             myEventList.append(event)
         return myEventList
 
@@ -109,35 +110,56 @@ class GCal:
     def deleteEventFromCalendar(self, event):
         eventID = event.ID
         self.service.events().delete(calendarId='primary', eventId=eventID).execute()
-        #print("Calendar %s: Deleted Event %s" % (self.ID, eventID))
+        #print("Calendar %s: Deleted Event %s" % (self.calID, eventID))
 
 
         
-def addEventsToMaster(eventList, ID, masterEventList):
+def addEventsToMaster(eventList, calID, masterEventList):
     # master event list is a dictionary, with the start/end time as the key.
-    # The value is another dictionary, with keys corresponding to the calendars.
-    # That dictionary should ultimately have one entry for each calendar.
+    # The value is a list, with an entry for each event in that timeslot.
+    # That list should ultimately have at least one entry for each calendar,
+    # and may have multiple entries for a given calendar.
     for event in eventList:
         start = event.start  #.get('dateTime', event['start'].get('date'))
         end = event.end      #.get('dateTime', event['end'].get('date'))
         #print(start, end, event['summary'])
-        eventKey = "%s-%s" % (start, end)       # create a key from start & end time
-        if not eventKey in masterEventList:     # add it to the list, if necessary
-            masterEventList[eventKey] = {}
-        masterEventList[eventKey][ID] = event     # save this event in the timeslot
+        timeslot = "%s-%s" % (start, end)       # create a timeslot key from start & end time
+        if not timeslot in masterEventList:             # if the timeslot doesn't yet exist,
+            masterEventList[timeslot] = []              # create it
+        masterEventList[timeslot].append(event)         # and save this event in the timeslot
+            
     return masterEventList
 
 
-def findCalendarTag(event, calendars):
-    for ID in calendars:
-        tag = "<%s> " % ID
+def findCalendarTag(event):
+    for calID in calendars:
+        tag = "<%s> " % calID
         if event.summary.startswith(tag):
-            return ID
+            #print("findCalendarTag: found tag for calendar %s in event %s" % (calID, event.summary))
+            return calID
     return None
 
+
+def isCalendarEvent(eventList, calID, summary=None):
+    # given a list of events in a particular timeslot, look for an event on the specified calendar
+    for event in eventList:
+        if event.calID == calID:
+            if not summary:
+                return True
+            elif event.summary == summary:
+                return True
+    return False
+
+
+def getPrimaryEvent(eventList, calID):
+    for event in eventList:
+        if event.primary and event.calID == calID:
+            return event
+    return None
+    
             
 def main():
-        
+    global calendars
     calendars = {
         'PA':  {'type': 'Google', 'appName':'Calendar Sync', 'secrets':'pete_client_secret.json', 'creds_file':'pete-credentials.json', 'publishDetails': ''},
         'MOV': {'type': 'Google', 'appName':'MOV Calendar Sync', 'secrets':'mov_client_secret.json', 'creds_file':'mov-credentials.json', 'publishDetails': 'PA'},
@@ -148,74 +170,40 @@ def main():
     masterEventList = {}
 
     print("Running at %s" % datetime.now())
-    for ID in calendars:
-        cal = calendars[ID]
+    for calID in calendars:
+        cal = calendars[calID]
         if cal['type'] == 'Google':
-            cal['instance'] = GCal(ID=ID, appName=cal['appName'], secretsFile=cal['secrets'], credentialsFile=cal['creds_file'])
+            cal['instance'] = GoogleCalendar(calID=calID, appName=cal['appName'], secretsFile=cal['secrets'], credentialsFile=cal['creds_file'])
         elif cal['type'] == "Outlook":
-            cal['instance'] = Outlook(ID=ID, credentialsFile=cal['creds_file'])
+            cal['instance'] = OutlookCalendar(calID=calID, credentialsFile=cal['creds_file'])
         cal['eventList'] = cal['instance'].getEventsFromCalendar(daysAhead=30)
         eventsRetrieved = len(cal['eventList'])
-        print("Calendar %s: Retrieved %d entries" % (ID, eventsRetrieved))
+        print("Calendar %s: Retrieved %d entries" % (calID, eventsRetrieved))
         if eventsRetrieved == 0:
-            print("Exiting on 0 events retrieved from Calendar %s" % ID)
-        masterEventList = addEventsToMaster(cal['eventList'], ID, masterEventList)
-    
+            print("Exiting on 0 events retrieved from Calendar %s" % calID)
+        masterEventList = addEventsToMaster(cal['eventList'], calID, masterEventList)
+
     for timeslot in masterEventList:
         if not 'T' in timeslot: continue    # skip all-day events
-
-        #print("======== Checking Timeslot %s:" % timeslot)
         # unpack the master events list - entries correspond to start/end times
-        timeslotEvents = masterEventList[timeslot]     # it's a dictionary
-        #print("Timeslot has %s events" % len(timeslotEvents))
+        timeslotEvents = masterEventList[timeslot]     # it's a list
+        print("======== Checking Timeslot %s - total events: %d:" % (timeslot, len(timeslotEvents)))
         # look at all the events in this timeslot, identify which calendars need placeholders added
-        placeholderSet = set()    # use a set to hold the IDs of calendars that need placeholders
-        primaryEventCalendarID = None
-        for ID in calendars:
-            if not ID in timeslotEvents:
-                print("%s missing event for Calendar %s" % (timeslot, ID))
-                placeholderSet.add(ID)
-            else:
-                event = timeslotEvents[ID]
-                #print(timeslot, ID, event.summary)
-                if not primaryEventCalendarID and not findCalendarTag(event, calendars):
-                    #print("Identified Primary Calendar %s" % ID)
-                    primaryEventCalendarID = ID
 
-        if len(placeholderSet) == 0:
-            #print("Timeslot %s has events for all calendars, continuing...." % timeslot)
-            continue
-            
-        if primaryEventCalendarID:
-            # primary calendar for event identified - add events to others
-            publishDetails = calendars[primaryEventCalendarID]['publishDetails']
-            event = timeslotEvents[primaryEventCalendarID]
-            start = event.start
-            end = event.end
-            print("Primary Calendar for event: %s (%s)" % (primaryEventCalendarID, event.summary))
-            for ID in calendars:
-                cal = calendars[ID]
-                if ID in placeholderSet:     # this calendar needs a placeholder
-                    if ID in publishDetails:
-                        #cal['instance'].copyEvent(primaryEventCalendarID, event)
-                        newEvent = MyEvent()
-                        newEvent.createCopyOfEvent(primaryEventCalendarID, event)
-                        print("Copying event %s from calendar %s to %s" % (event.summary, primaryEventCalendarID, ID))
-                        #input("Press Enter to continue")
-                        result = cal['instance'].addEventToCalendar(newEvent)
-                        #print('Created Copied Event %s on Calendar %s' % (newEvent.summary, ID))
-                        #exit(0)
-                    else:
-                        #cal['instance'].addPlaceholder(primaryEventCalendarID, start, end)
-                        newEvent = MyEvent()
-                        newEvent.createPlaceholderEvent(primaryEventCalendarID, start, end)
-                        #print("Adding placeholder %s to calendar %s" % (newEvent.summary, ID))
-                        #input("Press Enter to continue")
-                        result = cal['instance'].addEventToCalendar(newEvent)
-                        print('Created Placeholder Event %s on Calendar %s' % (newEvent.summary, ID))
-                        #exit(0)
-                                    
-        else:
+        primaryEventCalendarSet = set() # use a set to hold IDs of calendars with primary events in this timeslot
+        for event in timeslotEvents:
+            event.primary = not findCalendarTag(event)
+            if event.primary:
+                print("Identified Primary Calendar %s" % event.calID)
+                primaryEventCalendarSet.add(event.calID)
+
+        placeholderSet = set()    # use a set to hold the IDs of calendars that need placeholders
+        for calID in calendars:
+            if not isCalendarEvent(timeslotEvents, calID):
+                print("No event found for Calendar %s, need placeholder" % calID)
+                placeholderSet.add(calID)
+
+        if len(primaryEventCalendarSet) == 0:
             # no primary calendar - this means the event was deleted from the primary calendar,
             # and all the ones remaining in this timeslot are placeholders.  Delete them.
             print("No Primary Calendar for any event in this timeslot - deleting placeholders...")
@@ -226,6 +214,40 @@ def main():
                     cal['instance'].deleteEventFromCalendar(event)
                     print("Deleted event %s from calendar %s" % (event.summary, ID))
                     #input("Press Enter to continue")
+
+        else:
+            for primaryEventCalendarID in primaryEventCalendarSet:
+                # primary calendar for event identified - add events to others
+                publishDetails = calendars[primaryEventCalendarID]['publishDetails']
+                event = getPrimaryEvent(timeslotEvents, primaryEventCalendarID)
+                if event is None:
+                    print("No primary event found for calendar %s, timeslot %s" % (primaryEventCalendarID, timeslot))
+                start = event.start
+                end = event.end
+                print("Primary Calendar for event: %s (%s)" % (primaryEventCalendarID, event.summary))
+                for calID in calendars:
+                    cal = calendars[calID]
+                    if calID in publishDetails:
+                        newEvent = MyEvent()
+                        newEvent.createCopyOfEvent(primaryEventCalendarID, event)
+                        if isCalendarEvent(timeslotEvents, calID, summary=newEvent.summary):
+                            print("Calendar %s already has an event %s for this timeslot" % (calID, newEvent.summary))
+                        else:
+                            #print("Copying event %s from calendar %s to %s" % (event.summary, primaryEventCalendarID, calID))
+                            #input("Press Enter to continue")
+                            result = cal['instance'].addEventToCalendar(newEvent)
+                            print('Copied Event %s and added to Calendar %s' % (newEvent.summary, calID))
+                            #exit(0)
+                    elif calID in placeholderSet:     # this calendar needs a placeholder
+                        newEvent = MyEvent()
+                        newEvent.createPlaceholderEvent(primaryEventCalendarID, start, end)
+                        if isCalendarEvent(timeslotEvents, calID, summary=newEvent.summary):
+                            print("Calendar %s already has an event %s for this timeslot" % (calID, newEvent.summary))
+                        else:
+                            #print("Adding placeholder %s to calendar %s" % (newEvent.summary, calID))
+                            #input("Press Enter to continue")
+                            result = cal['instance'].addEventToCalendar(newEvent)
+                            print('Created Placeholder Event %s on Calendar %s' % (newEvent.summary, calID))
             
 
 if __name__ == '__main__':
