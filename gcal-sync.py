@@ -103,6 +103,7 @@ class GoogleCalendar:
         GCalEvent['end'] = {}
         GCalEvent['end']['dateTime'] = event.end    #datetime.strptime(event.end, "%Y-%m-%dT%H:%M:%S")
         GCalEvent['location'] = event.location
+        GCalEvent['description'] = event.description
         event = self.service.events().insert(calendarId='primary', body=GCalEvent).execute()
         return event
 
@@ -188,8 +189,8 @@ def main():
         # unpack the master events list - entries correspond to start/end times
         timeslotEvents = masterEventList[timeslot]     # it's a list
         print("======== Checking Timeslot %s - total events: %d:" % (timeslot, len(timeslotEvents)))
-        # look at all the events in this timeslot, identify which calendars need placeholders added
 
+        # look at all the events in this timeslot, identify which calendars need placeholders added
         primaryEventCalendarSet = set() # use a set to hold IDs of calendars with primary events in this timeslot
         for event in timeslotEvents:
             event.primary = not findCalendarTag(event)
@@ -231,7 +232,8 @@ def main():
                         newEvent = MyEvent()
                         newEvent.createCopyOfEvent(primaryEventCalendarID, event)
                         if isCalendarEvent(timeslotEvents, calID, summary=newEvent.summary):
-                            print("Calendar %s already has an event %s for this timeslot" % (calID, newEvent.summary))
+                            #print("Calendar %s already has an event %s for this timeslot" % (calID, newEvent.summary))
+                            pass
                         else:
                             #print("Copying event %s from calendar %s to %s" % (event.summary, primaryEventCalendarID, calID))
                             #input("Press Enter to continue")
