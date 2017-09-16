@@ -208,13 +208,12 @@ def main():
             # no primary calendar - this means the event was deleted from the primary calendar,
             # and all the ones remaining in this timeslot are placeholders.  Delete them.
             print("No Primary Calendar for any event in this timeslot - deleting placeholders...")
-            for ID in calendars:
-                cal = calendars[ID]
-                if ID in timeslotEvents:
-                    event = timeslotEvents[ID]
-                    cal['instance'].deleteEventFromCalendar(event)
-                    print("Deleted event %s from calendar %s" % (event.summary, ID))
-                    #input("Press Enter to continue")
+            for event in timeslotEvents:
+                calID = event.calID
+                cal = calendars[calID]
+                cal['instance'].deleteEventFromCalendar(event)
+                print("Deleted event %s from calendar %s" % (event.summary, calID))
+                #input("Press Enter to continue")
 
         else:
             for primaryEventCalendarID in primaryEventCalendarSet:
