@@ -49,7 +49,7 @@ class OutlookCalendar:
         now = datetime.utcnow().replace(microsecond=0).isoformat() + 'Z' # 'Z' indicates UTC time
         then = (datetime.utcnow().replace(microsecond=0) + timedelta(days=daysAhead)).isoformat() + 'Z'
         #url = "https://outlook.office365.com/api/v1.0/me/events?$Select=Subject,Start,End,Location&start=%s&end=%s" % (now, then)
-        url = "https://outlook.office365.com/api/v1.0/me/calendarView?$Select=Subject,Start,End,Location,BodyPreview&$top=250&startDateTime=%s&endDateTime=%s" % (now, then)
+        url = "https://outlook.office365.com/api/v1.0/me/calendarView?$Select=Subject,Start,End,Location,BodyPreview,Attendees,Body&$top=250&startDateTime=%s&endDateTime=%s" % (now, then)
         #print(url)
         r = requests.get(url, headers=headers)
         returnDict = json.loads(r.text)
@@ -61,8 +61,11 @@ class OutlookCalendar:
                 #print("Skipping event in the past (%s, %s)" % (item['Subject'], item['Start']))
             #    continue
             #print("Outlook Item %s, start %s, end %s" % (item['Subject'], item['Start'], item['End']))
+            #if 'Attendees' in item: print("Attendees: %s" % item['Attendees'])
+            #print("Body:  %s" % item['Body'])
             #if 'dateTime' not in item['start']: continue    # skip all-day events
             #print(item)
+            #if item['Subject'].startswith("Canceled event:"): continue  # delete Outlook events that are actually canceled
             event = MyEvent()
             event.calID = self.calID
             event.ID = item['Id']

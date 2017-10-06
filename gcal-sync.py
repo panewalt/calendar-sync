@@ -79,6 +79,8 @@ class GoogleCalendar:
         myEventList = []
         for item in eventList:
             #print("Google Event %s, start %s, end %s" % (item['summary'], item['start'], item['end']))
+            #if 'attendees' in item:
+            #    print("Attendees: %s" % item['attendees'])
             if 'dateTime' not in item['start']: continue    # skip all-day events
             #print("%s: %s" % (self.calID, item))
             event = MyEvent()
@@ -188,31 +190,31 @@ def main():
         if not 'T' in timeslot: continue    # skip all-day events
         # unpack the master events list - entries correspond to start/end times
         timeslotEvents = masterEventList[timeslot]     # it's a list
-        print("======== Checking Timeslot %s - total events: %d:" % (timeslot, len(timeslotEvents)))
+        #print("======== Checking Timeslot %s - total events: %d:" % (timeslot, len(timeslotEvents)))
 
         # look at all the events in this timeslot, identify which calendars need placeholders added
         primaryEventCalendarSet = set() # use a set to hold IDs of calendars with primary events in this timeslot
         for event in timeslotEvents:
             event.primary = not findCalendarTag(event)
-            if event.primary:
-                print("Identified Primary Calendar %s" % event.calID)
+            if event.primary and not event.summary.startswith("Canceled event:"):
+                #print("Identified Primary Calendar %s" % event.calID)
                 primaryEventCalendarSet.add(event.calID)
 
         placeholderSet = set()    # use a set to hold the IDs of calendars that need placeholders
         for calID in calendars:
             if not isCalendarEvent(timeslotEvents, calID):
-                print("No event found for Calendar %s, need placeholder" % calID)
+                print("No event found for Calendar %s in timeslot %s" % (calID, timeslot))
                 placeholderSet.add(calID)
 
         if len(primaryEventCalendarSet) == 0:
             # no primary calendar - this means the event was deleted from the primary calendar,
             # and all the ones remaining in this timeslot are placeholders.  Delete them.
-            print("No Primary Calendar for any event in this timeslot - deleting placeholders...")
+            print("No Primary Calendar for any event in timeslot %s - deleting placeholders..." % timeslot)
             for event in timeslotEvents:
                 calID = event.calID
                 cal = calendars[calID]
                 cal['instance'].deleteEventFromCalendar(event)
-                print("Deleted event %s from calendar %s" % (event.summary, calID))
+                print("Deleted event %s from timeslot %s, calendar %s" % (event.summary, timeslot, calID))
                 #input("Press Enter to continue")
 
         else:
@@ -221,10 +223,10 @@ def main():
                 publishDetails = calendars[primaryEventCalendarID]['publishDetails']
                 event = getPrimaryEvent(timeslotEvents, primaryEventCalendarID)
                 if event is None:
-                    print("No primary event found for calendar %s, timeslot %s" % (primaryEventCalendarID, timeslot))
+                    print("ERROR: should be a primary event for calendar %s, timeslot %s, but none found" % (primaryEventCalendarID, timeslot))
                 start = event.start
                 end = event.end
-                print("Primary Calendar for event: %s (%s)" % (primaryEventCalendarID, event.summary))
+                #print("Primary Calendar for event: %s (%s)" % (primaryEventCalendarID, event.summary))
                 for calID in calendars:
                     cal = calendars[calID]
                     if calID in publishDetails:
@@ -243,12 +245,12 @@ def main():
                         newEvent = MyEvent()
                         newEvent.createPlaceholderEvent(primaryEventCalendarID, start, end)
                         if isCalendarEvent(timeslotEvents, calID, summary=newEvent.summary):
-                            print("Calendar %s already has an event %s for this timeslot" % (calID, newEvent.summary))
+                            print("Calendar %s already has an event %s for timeslot %s" % (calID, newEvent.summary, timeslot))
                         else:
                             #print("Adding placeholder %s to calendar %s" % (newEvent.summary, calID))
                             #input("Press Enter to continue")
                             result = cal['instance'].addEventToCalendar(newEvent)
-                            print('Created Placeholder Event %s on Calendar %s' % (newEvent.summary, calID))
+                            print('Created Placeholder Event %s for timeslot %s on Calendar %s' % (newEvent.summary, timeslot, calID))
             
 
 if __name__ == '__main__':
