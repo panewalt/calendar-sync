@@ -203,7 +203,7 @@ def main():
         placeholderSet = set()    # use a set to hold the IDs of calendars that need placeholders
         for calID in calendars:
             if not isCalendarEvent(timeslotEvents, calID):
-                print("No event found for Calendar %s in timeslot %s" % (calID, timeslot))
+                #print("No event found for Calendar %s in timeslot %s" % (calID, timeslot))
                 placeholderSet.add(calID)
 
         if len(primaryEventCalendarSet) == 0:
@@ -217,6 +217,10 @@ def main():
                 print("Deleted event %s from timeslot %s, calendar %s" % (event.summary, timeslot, calID))
                 #input("Press Enter to continue")
 
+        elif len(placeholderSet) == 0:
+            # no placeholders needed, this timeslot is good to go
+            continue
+            
         else:
             for primaryEventCalendarID in primaryEventCalendarSet:
                 # primary calendar for event identified - add events to others
@@ -226,7 +230,7 @@ def main():
                     print("ERROR: should be a primary event for calendar %s, timeslot %s, but none found" % (primaryEventCalendarID, timeslot))
                 start = event.start
                 end = event.end
-                #print("Primary Calendar for event: %s (%s)" % (primaryEventCalendarID, event.summary))
+                print("Primary Calendar for event: %s (%s)" % (primaryEventCalendarID, event.summary))
                 for calID in calendars:
                     cal = calendars[calID]
                     if calID in publishDetails:

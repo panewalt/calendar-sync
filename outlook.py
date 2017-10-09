@@ -65,7 +65,10 @@ class OutlookCalendar:
             #print("Body:  %s" % item['Body'])
             #if 'dateTime' not in item['start']: continue    # skip all-day events
             #print(item)
-            #if item['Subject'].startswith("Canceled event:"): continue  # delete Outlook events that are actually canceled
+            if item['Subject'].startswith("Canceled: "):
+                # Outlook keeps canceled events - if this is one, don't include it on our list.
+                # This will have the effect of deleting placeholders set for the original event on other calendars.
+                continue  
             event = MyEvent()
             event.calID = self.calID
             event.ID = item['Id']
