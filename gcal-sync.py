@@ -18,6 +18,8 @@ import dateutil.parser
 
 from myevent import MyEvent
 from outlook import OutlookCalendar
+
+gDaysAhead = 7
     
 class GoogleCalendar:
     # class containing a Google calendar.
@@ -89,9 +91,10 @@ class GoogleCalendar:
             event.summary = item['summary']
             event.start = item['start']['dateTime']
             event.end = item['end']['dateTime']
+            event.lastModified = item['updated']
             if 'location' in item: event.location = item['location']
             if 'description' in item: event.description = item['description']
-            #print("Calendar: %s, Event %s, start %s, end %s, Location: %s" % (self.calID, event.summary, event.start, event.end, event.location))
+            #print("Calendar: %s, Event %s, start %s, end %s, Location: %s, modified: %s" % (self.calID, event.summary, event.start, event.end, event.location, event.lastModified))
             myEventList.append(event)
         return myEventList
 
@@ -162,6 +165,7 @@ def getPrimaryEvent(eventList, calID):
     
             
 def main():
+    gDaysAhead = 30
     global calendars
     calendars = {
         'PA':  {'type': 'Google', 'appName':'Calendar Sync', 'secrets':'pete_client_secret.json', 'creds_file':'pete-credentials.json', 'publishDetails': ''},
@@ -179,7 +183,7 @@ def main():
             cal['instance'] = GoogleCalendar(calID=calID, appName=cal['appName'], secretsFile=cal['secrets'], credentialsFile=cal['creds_file'])
         elif cal['type'] == "Outlook":
             cal['instance'] = OutlookCalendar(calID=calID, credentialsFile=cal['creds_file'])
-        cal['eventList'] = cal['instance'].getEventsFromCalendar(daysAhead=30)
+        cal['eventList'] = cal['instance'].getEventsFromCalendar(daysAhead=gDaysAhead)
         eventsRetrieved = len(cal['eventList'])
         print("Calendar %s: Retrieved %d entries" % (calID, eventsRetrieved))
         if eventsRetrieved == 0:
@@ -193,12 +197,12 @@ def main():
         #print("======== Checking Timeslot %s - total events: %d:" % (timeslot, len(timeslotEvents)))
 
         # look at all the events in this timeslot, identify which calendars need placeholders added
-        primaryEventCalendarSet = set() # use a set to hold IDs of calendars with primary events in this timeslot
+        primaryEventSet = set()
         for event in timeslotEvents:
             event.primary = not findCalendarTag(event)
             if event.primary and not event.summary.startswith("Canceled event:"):
-                #print("Identified Primary Calendar %s" % event.calID)
-                primaryEventCalendarSet.add(event.calID)
+                #print("Identified Primary Calendar %s for Event %s" % (event.calID, event.summary))
+                primaryEventSet.add(event)
 
         placeholderSet = set()    # use a set to hold the IDs of calendars that need placeholders
         for calID in calendars:
@@ -206,10 +210,10 @@ def main():
                 #print("No event found for Calendar %s in timeslot %s" % (calID, timeslot))
                 placeholderSet.add(calID)
 
-        if len(primaryEventCalendarSet) == 0:
+        if len(primaryEventSet) == 0:
             # no primary calendar - this means the event was deleted from the primary calendar,
             # and all the ones remaining in this timeslot are placeholders.  Delete them.
-            print("No Primary Calendar for any event in timeslot %s - deleting placeholders..." % timeslot)
+            print("No Primary Event in timeslot %s - deleting placeholders..." % timeslot)
             for event in timeslotEvents:
                 calID = event.calID
                 cal = calendars[calID]
@@ -217,44 +221,26 @@ def main():
                 print("Deleted event %s from timeslot %s, calendar %s" % (event.summary, timeslot, calID))
                 #input("Press Enter to continue")
 
-        elif len(placeholderSet) == 0:
-            # no placeholders needed, this timeslot is good to go
-            continue
-            
         else:
-            for primaryEventCalendarID in primaryEventCalendarSet:
+            for primaryEvent in primaryEventSet:
                 # primary calendar for event identified - add events to others
-                publishDetails = calendars[primaryEventCalendarID]['publishDetails']
-                event = getPrimaryEvent(timeslotEvents, primaryEventCalendarID)
-                if event is None:
-                    print("ERROR: should be a primary event for calendar %s, timeslot %s, but none found" % (primaryEventCalendarID, timeslot))
-                start = event.start
-                end = event.end
-                print("Primary Calendar for event: %s (%s)" % (primaryEventCalendarID, event.summary))
+                publishDetails = calendars[primaryEvent.calID]['publishDetails']
+                start = primaryEvent.start
+                end = primaryEvent.end
+                #print("Handling Primary Event %s on Calendar %s" % (primaryEvent.summary, primaryEvent.calID))
                 for calID in calendars:
                     cal = calendars[calID]
+                    newEvent = MyEvent()
                     if calID in publishDetails:
-                        newEvent = MyEvent()
-                        newEvent.createCopyOfEvent(primaryEventCalendarID, event)
-                        if isCalendarEvent(timeslotEvents, calID, summary=newEvent.summary):
-                            #print("Calendar %s already has an event %s for this timeslot" % (calID, newEvent.summary))
-                            pass
-                        else:
-                            #print("Copying event %s from calendar %s to %s" % (event.summary, primaryEventCalendarID, calID))
-                            #input("Press Enter to continue")
-                            result = cal['instance'].addEventToCalendar(newEvent)
-                            print('Copied Event %s and added to Calendar %s' % (newEvent.summary, calID))
-                            #exit(0)
+                        newEvent.createCopyOfEvent(primaryEvent.calID, primaryEvent)
                     elif calID in placeholderSet:     # this calendar needs a placeholder
-                        newEvent = MyEvent()
-                        newEvent.createPlaceholderEvent(primaryEventCalendarID, start, end)
-                        if isCalendarEvent(timeslotEvents, calID, summary=newEvent.summary):
-                            print("Calendar %s already has an event %s for timeslot %s" % (calID, newEvent.summary, timeslot))
-                        else:
-                            #print("Adding placeholder %s to calendar %s" % (newEvent.summary, calID))
-                            #input("Press Enter to continue")
-                            result = cal['instance'].addEventToCalendar(newEvent)
-                            print('Created Placeholder Event %s for timeslot %s on Calendar %s' % (newEvent.summary, timeslot, calID))
+                        newEvent.createPlaceholderEvent(primaryEvent.calID, start, end)
+                    if isCalendarEvent(timeslotEvents, calID, summary=newEvent.summary):
+                        #print("Calendar %s already has an event %s for this timeslot" % (calID, newEvent.summary))
+                        pass
+                    else:
+                        print("Adding event %s to calendar %s" % (newEvent.summary, calID))
+                        result = cal['instance'].addEventToCalendar(newEvent)
             
 
 if __name__ == '__main__':

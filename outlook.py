@@ -48,8 +48,11 @@ class OutlookCalendar:
         headers = self.createRequestHeaders()
         now = datetime.utcnow().replace(microsecond=0).isoformat() + 'Z' # 'Z' indicates UTC time
         then = (datetime.utcnow().replace(microsecond=0) + timedelta(days=daysAhead)).isoformat() + 'Z'
-        #url = "https://outlook.office365.com/api/v1.0/me/events?$Select=Subject,Start,End,Location&start=%s&end=%s" % (now, then)
-        url = "https://outlook.office365.com/api/v1.0/me/calendarView?$Select=Subject,Start,End,Location,BodyPreview,Attendees,Body&$top=250&startDateTime=%s&endDateTime=%s" % (now, then)
+        #url = "https://outlook.office365.com/api/v1.0/me/events?$Select=Subject,Start,End,Location,BodyPreview&start=%s&end=%s" % (now, then)
+        # try without $select to get all available fields
+        #url = "https://outlook.office365.com/api/v1.0/me/calendarView?$top=250&startDateTime=%s&endDateTime=%s" % (now, then)
+        # for better performance, just select the fields we want to use
+        url = "https://outlook.office365.com/api/v1.0/me/calendarView?$Select=Subject,Start,End,Location,BodyPreview,Attendees,DateTimeLastModified&$top=250&startDateTime=%s&endDateTime=%s" % (now, then)
         #print(url)
         r = requests.get(url, headers=headers)
         returnDict = json.loads(r.text)
@@ -78,8 +81,9 @@ class OutlookCalendar:
             event.end = event.convertUTCtoLocalDatetime(item['End'])
             event.location = item['Location']['DisplayName']
             event.description = item['BodyPreview']
+            event.lastModified = event.convertUTCtoLocalDatetime(item['DateTimeLastModified'])
             #if 'description' in item: event.description = item['description']
-            #print("Outlook Event %s, start %s, end %s" % (event.summary, event.start, event.end))
+            #print("Outlook Event %s, start %s, end %s, modified %s" % (event.summary, event.start, event.end, event.lastModified))
             myEventList.append(event)
         return myEventList
 
@@ -131,7 +135,7 @@ class OutlookCalendar:
         
 def main():
 
-    outlook = Outlook("ID", "ul-credentials.txt")
+    outlook = OutlookCalendar("ID", "ul-credentials.txt")
     print("Retrieving events from calendar")
     outlook.getEventsFromCalendar(daysAhead=30)
 
