@@ -20,12 +20,12 @@ class MyEvent:
         # Make them both local objects
      
 
-    def createPlaceholderEvent(self, ID, start, end):
-        newSummary = "<%s> Busy" % ID
+    def createPlaceholderEvent(self, calID, start, end):
+        newSummary = "<%s> Busy" % calID
         self.createEvent(ID='', summary=newSummary, start=start, end=end)
 
-    def createCopyOfEvent(self, ID, event):
-        newSummary = "<%s> %s" % (ID, event.summary)
+    def createCopyOfEvent(self, calID, event):
+        newSummary = "<%s> %s" % (calID, event.summary)
         self.createEvent(ID=event.ID, summary=newSummary, location=event.location, description=event.description, start=event.start, end=event.end)
         #print("Event Copied - Summary: %s, Start: %s, End: %s, Location: %s" % (self.summary, self.start, self.end, self.location))
         #return newEvent

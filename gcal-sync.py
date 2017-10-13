@@ -146,15 +146,15 @@ def findCalendarTag(event):
     return None
 
 
-def isCalendarEvent(eventList, calID, summary=None):
+def getCalendarEvent(eventList, calID, summary=None):
     # given a list of events in a particular timeslot, look for an event on the specified calendar
     for event in eventList:
         if event.calID == calID:
             if not summary:
-                return True
+                return event
             elif event.summary == summary:
-                return True
-    return False
+                return event
+    return None
 
 
 def getPrimaryEvent(eventList, calID):
@@ -204,14 +204,8 @@ def main():
                 #print("Identified Primary Calendar %s for Event %s" % (event.calID, event.summary))
                 primaryEventSet.add(event)
 
-        placeholderSet = set()    # use a set to hold the IDs of calendars that need placeholders
-        for calID in calendars:
-            if not isCalendarEvent(timeslotEvents, calID):
-                #print("No event found for Calendar %s in timeslot %s" % (calID, timeslot))
-                placeholderSet.add(calID)
-
         if len(primaryEventSet) == 0:
-            # no primary calendar - this means the event was deleted from the primary calendar,
+            # no primary events - this means an event was deleted from the primary calendar,
             # and all the ones remaining in this timeslot are placeholders.  Delete them.
             print("No Primary Event in timeslot %s - deleting placeholders..." % timeslot)
             for event in timeslotEvents:
@@ -220,27 +214,34 @@ def main():
                 cal['instance'].deleteEventFromCalendar(event)
                 print("Deleted event %s from timeslot %s, calendar %s" % (event.summary, timeslot, calID))
                 #input("Press Enter to continue")
+                continue
 
-        else:
-            for primaryEvent in primaryEventSet:
-                # primary calendar for event identified - add events to others
-                publishDetails = calendars[primaryEvent.calID]['publishDetails']
-                start = primaryEvent.start
-                end = primaryEvent.end
-                #print("Handling Primary Event %s on Calendar %s" % (primaryEvent.summary, primaryEvent.calID))
-                for calID in calendars:
-                    cal = calendars[calID]
-                    newEvent = MyEvent()
-                    if calID in publishDetails:
-                        newEvent.createCopyOfEvent(primaryEvent.calID, primaryEvent)
-                    elif calID in placeholderSet:     # this calendar needs a placeholder
-                        newEvent.createPlaceholderEvent(primaryEvent.calID, start, end)
-                    if isCalendarEvent(timeslotEvents, calID, summary=newEvent.summary):
-                        #print("Calendar %s already has an event %s for this timeslot" % (calID, newEvent.summary))
-                        pass
-                    else:
-                        print("Adding event %s to calendar %s" % (newEvent.summary, calID))
-                        result = cal['instance'].addEventToCalendar(newEvent)
+        # now go through all the primary events and add placeholders where needed.
+        for primaryEvent in primaryEventSet:
+            # primary calendar for event identified - add events to others
+            publishDetails = calendars[primaryEvent.calID]['publishDetails']
+            start = primaryEvent.start
+            end = primaryEvent.end
+            #print("Handling Primary Event %s on Calendar %s" % (primaryEvent.summary, primaryEvent.calID))
+            for calID in calendars:
+                cal = calendars[calID]
+                if calID == primaryEvent.calID: continue    # primary event calendar doesn't need placeholders
+                placeholderEvent = getCalendarEvent(timeslotEvents, calID)
+                if placeholderEvent:
+                    #print("Existing Placeholder Event %s on calendar %s" % (placeholderEvent.summary, calID))
+                    if placeholderEvent.lastModified >= primaryEvent.lastModified:
+                        continue
+                    print("Placeholder Event %s on calendar %s is outdated, replacing it" % (placeholderEvent.summary, calID))
+                    cal['instance'].deleteEventFromCalendar(placeholderEvent)
+                    # and fall through to create the placeholder event
+                # at this point, this calendar needs a placeholder
+                newEvent = MyEvent()
+                if calID in publishDetails:
+                    newEvent.createCopyOfEvent(primaryEvent.calID, primaryEvent)
+                else:
+                    newEvent.createPlaceholderEvent(primaryEvent.calID, start, end)
+                print("Adding event %s to calendar %s, timeslot %s" % (newEvent.summary, calID, timeslot))
+                result = cal['instance'].addEventToCalendar(newEvent)
             
 
 if __name__ == '__main__':

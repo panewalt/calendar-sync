@@ -81,7 +81,7 @@ class OutlookCalendar:
             event.end = event.convertUTCtoLocalDatetime(item['End'])
             event.location = item['Location']['DisplayName']
             event.description = item['BodyPreview']
-            event.lastModified = event.convertUTCtoLocalDatetime(item['DateTimeLastModified'])
+            event.lastModified = item['DateTimeLastModified']  #event.convertUTCtoLocalDatetime(item['DateTimeLastModified'])
             #if 'description' in item: event.description = item['description']
             #print("Outlook Event %s, start %s, end %s, modified %s" % (event.summary, event.start, event.end, event.lastModified))
             myEventList.append(event)
