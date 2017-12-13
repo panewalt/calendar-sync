@@ -64,7 +64,7 @@ class GoogleCalendar:
         if not credentials or credentials.invalid:
             flow = client.flow_from_clientsecrets(secretsFile, scope)
             flow.user_agent = appName
-            credentials = tools.run(flow, store)
+            credentials = tools.run_flow(flow, store)
             print('Storing credentials to ' + credentialsPath)
         return credentials
 
@@ -171,7 +171,8 @@ def main():
         'PA':  {'type': 'Google', 'appName':'Calendar Sync', 'secrets':'pete_client_secret.json', 'creds_file':'pete-credentials.json', 'publishDetails': ''},
         'MOV': {'type': 'Google', 'appName':'MOV Calendar Sync', 'secrets':'mov_client_secret.json', 'creds_file':'mov-credentials.json', 'publishDetails': 'PA'},
         'GC':  {'type': 'Google', 'appName':'Calendar Sync', 'secrets':'gc_client_secret.json', 'creds_file':'gc-credentials.json', 'publishDetails': 'PA,MOV'},
-        'UL':  {'type': 'Outlook', 'appName':'Calendar Sync', 'creds_file': 'ul-credentials.txt', 'publishDetails': 'PA'}
+        'UL':  {'type': 'Outlook', 'appName':'Calendar Sync', 'creds_file': 'ul-credentials.txt', 'publishDetails': 'PA,UL2'},
+        'UL2': {'type': 'Google', 'appName':'Calendar Sync', 'secrets': 'ul_client_secret.json', 'creds_file':'ul-credentials.json','publishDetails': 'PA,UL'}
         }
     totalCalendars = len(calendars)
     masterEventList = {}
