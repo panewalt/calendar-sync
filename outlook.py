@@ -63,7 +63,7 @@ class OutlookCalendar:
             #if item['Start'] < now:
                 #print("Skipping event in the past (%s, %s)" % (item['Subject'], item['Start']))
             #    continue
-            #print("Outlook Item %s, start %s, end %s" % (item['Subject'], item['Start'], item['End']))
+            #print("%s: Outlook Event %s, start %s, end %s" % (self.calID, item['Subject'], item['Start'], item['End']))
             #if 'Attendees' in item: print("Attendees: %s" % item['Attendees'])
             #print("Body:  %s" % item['Body'])
             #if 'dateTime' not in item['start']: continue    # skip all-day events

@@ -19,7 +19,7 @@ import dateutil.parser
 from myevent import MyEvent
 from outlook import OutlookCalendar
 
-gDaysAhead = 7
+gDaysAhead = 30
     
 class GoogleCalendar:
     # class containing a Google calendar.
@@ -80,7 +80,7 @@ class GoogleCalendar:
         # now eventsList has a list of Google Calendar events.  Translate that to MyEvents events.
         myEventList = []
         for item in eventList:
-            #print("Google Event %s, start %s, end %s" % (item['summary'], item['start'], item['end']))
+            #print("%s: Google Event %s, start %s, end %s" % (self.calID, item['summary'], item['start'], item['end']))
             #if 'attendees' in item:
             #    print("Attendees: %s" % item['attendees'])
             if 'dateTime' not in item['start']: continue    # skip all-day events
@@ -165,7 +165,6 @@ def getPrimaryEvent(eventList, calID):
     
             
 def main():
-    gDaysAhead = 30
     global calendars
     calendars = {
         'PA':  {'type': 'Google', 'appName':'Calendar Sync', 'secrets':'pete_client_secret.json', 'creds_file':'pete-credentials.json', 'publishDetails': ''},
