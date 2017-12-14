@@ -27,7 +27,7 @@ class OutlookCalendar:
         self.getCredentials(credentialsFile)
 
     def getCredentials(self, credentialsFile):
-        homeDir = os.path.expanduser('~')
+        homeDir = '.'	#os.path.expanduser('~')
         credentialsDir = os.path.join(homeDir, '.credentials')
         if not os.path.exists(credentialsDir):
             os.makedirs(credentialsDir)

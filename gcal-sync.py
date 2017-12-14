@@ -33,6 +33,7 @@ class GoogleCalendar:
     # appName as entered in the Developer Console
     # https://console.developers.google.com
     # credentialsFile for this calendar, stored in ~/.credentials
+    # Note that the secrets file is used to create the credentials file, which is used thereafter.
     
     def __init__(self, calID, scope=None, appName=None, secretsFile=None, credentialsFile=None):
         self.calID = calID
@@ -53,7 +54,7 @@ class GoogleCalendar:
         Returns:
             Credentials, the obtained credential.
         """
-        homeDir = os.path.expanduser('~')
+        homeDir = '.'	#os.path.expanduser('~')
         credentialsDir = os.path.join(homeDir, '.credentials')
         if not os.path.exists(credentialsDir):
             os.makedirs(credentialsDir)
