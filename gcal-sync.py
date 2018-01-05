@@ -54,7 +54,7 @@ class GoogleCalendar:
         Returns:
             Credentials, the obtained credential.
         """
-        homeDir = '.'	#os.path.expanduser('~')
+        homeDir = '.'   #os.path.expanduser('~')
         credentialsDir = os.path.join(homeDir, '.credentials')
         if not os.path.exists(credentialsDir):
             os.makedirs(credentialsDir)
@@ -149,7 +149,9 @@ def findCalendarTag(event):
 
 def getCalendarEvent(eventList, calID, summary=None):
     # given a list of events in a particular timeslot, look for an event on the specified calendar
+    #print("getCalendarEvent: Looking for event in calendar %s (%s total events in this timeslot)" % (calID, len(eventList)))
     for event in eventList:
+        #print("getCalendarEvents: found event %s on calendar %s" % (event.summary, event.calID))
         if event.calID == calID:
             if not summary:
                 return event
@@ -168,11 +170,11 @@ def getPrimaryEvent(eventList, calID):
 def main():
     global calendars
     calendars = {
-        'PA':  {'type': 'Google', 'appName':'Calendar Sync', 'secrets':'pete_client_secret.json', 'creds_file':'pete-credentials.json', 'publishDetails': ''},
-        #'MOV': {'type': 'Google', 'appName':'MOV Calendar Sync', 'secrets':'mov_client_secret.json', 'creds_file':'mov-credentials.json', 'publishDetails': 'PA'},
-        #'GC':  {'type': 'Google', 'appName':'Calendar Sync', 'secrets':'gc_client_secret.json', 'creds_file':'gc-credentials.json', 'publishDetails': 'PA,MOV'},
-        #'UL':  {'type': 'Outlook', 'appName':'Calendar Sync', 'creds_file': 'ul-credentials.txt', 'publishDetails': 'PA,UL2'},
-        'UL2': {'type': 'Google', 'appName':'Calendar Sync', 'secrets': 'ul_client_secret.json', 'creds_file':'ul-credentials.json','publishDetails': 'PA,UL'}
+        'PA':  {'active': True,  'type': 'Google', 'appName':'Calendar Sync', 'secrets':'pete_client_secret.json', 'creds_file':'pete-credentials.json', 'publishDetails': ''},
+        #'MOV': {'active': False, 'type': 'Google', 'appName':'MOV Calendar Sync', 'secrets':'mov_client_secret.json', 'creds_file':'mov-credentials.json', 'publishDetails': 'PA'},
+        #'GC':  {'active': False, 'type': 'Google', 'appName':'Calendar Sync', 'secrets':'gc_client_secret.json', 'creds_file':'gc-credentials.json', 'publishDetails': 'PA,MOV'},
+        #'UL':  {'active': False, 'type': 'Outlook', 'appName':'Calendar Sync', 'creds_file': 'ul-credentials.txt', 'publishDetails': 'PA,UL2'},
+        'UL2': {'active': True,  'type': 'Google', 'appName':'Calendar Sync', 'secrets': 'ul_client_secret.json', 'creds_file':'ul-credentials.json','publishDetails': 'PA,UL'}
         }
     totalCalendars = len(calendars)
     masterEventList = {}
@@ -180,6 +182,7 @@ def main():
     print("Running at %s" % datetime.now())
     for calID in calendars:
         cal = calendars[calID]
+        if cal['active'] == False: continue     # don't read events from inactive calendars
         if cal['type'] == 'Google':
             cal['instance'] = GoogleCalendar(calID=calID, appName=cal['appName'], secretsFile=cal['secrets'], credentialsFile=cal['creds_file'])
         elif cal['type'] == "Outlook":
@@ -195,14 +198,14 @@ def main():
         if not 'T' in timeslot: continue    # skip all-day events
         # unpack the master events list - entries correspond to start/end times
         timeslotEvents = masterEventList[timeslot]     # it's a list
-        #print("======== Checking Timeslot %s - total events: %d:" % (timeslot, len(timeslotEvents)))
+        print("======== Checking Timeslot %s - total events: %d:" % (timeslot, len(timeslotEvents)))
 
         # look at all the events in this timeslot, identify which calendars need placeholders added
         primaryEventSet = set()
         for event in timeslotEvents:
             event.primary = not findCalendarTag(event)
             if event.primary and not event.summary.startswith("Canceled event:"):
-                #print("Identified Primary Calendar %s for Event %s" % (event.calID, event.summary))
+                print("Identified Primary Calendar %s for Event %s" % (event.calID, event.summary))
                 primaryEventSet.add(event)
 
         if len(primaryEventSet) == 0:
@@ -213,6 +216,7 @@ def main():
                 calID = event.calID
                 cal = calendars[calID]
                 cal['instance'].deleteEventFromCalendar(event)
+                #timeslotEvents.remove(placeholderEvent)
                 print("Deleted event %s from timeslot %s, calendar %s" % (event.summary, timeslot, calID))
                 #input("Press Enter to continue")
                 continue
@@ -223,19 +227,31 @@ def main():
             publishDetails = calendars[primaryEvent.calID]['publishDetails']
             start = primaryEvent.start
             end = primaryEvent.end
-            #print("Handling Primary Event %s on Calendar %s" % (primaryEvent.summary, primaryEvent.calID))
+            print("Handling Primary Event %s on Calendar %s" % (primaryEvent.summary, primaryEvent.calID))
             for calID in calendars:
-                cal = calendars[calID]
                 if calID == primaryEvent.calID: continue    # primary event calendar doesn't need placeholders
+                cal = calendars[calID]
+                #if cal['active'] == False: continue         # skip inactive calendars
                 placeholderEvent = getCalendarEvent(timeslotEvents, calID)
+                # temporary - delete the mess I created somehow, with hundreds of duplicate events,
+                # then figure out how to not do it again
+                '''
+                while placeholderEvent and len(timeslotEvents) > 5:
+                    print("Deleting Existing Placeholder Event %s on calendar %s" % (placeholderEvent.summary, calID))
+                    cal['instance'].deleteEventFromCalendar(placeholderEvent)
+                    timeslotEvents.remove(placeholderEvent)
+                    #input("Press Enter to continue")
+                    placeholderEvent = getCalendarEvent(timeslotEvents, calID)
+                '''    
                 if placeholderEvent:
-                    #print("Existing Placeholder Event %s on calendar %s" % (placeholderEvent.summary, calID))
+                    print("Existing Placeholder Event %s on calendar %s" % (placeholderEvent.summary, calID))
                     if placeholderEvent.lastModified >= primaryEvent.lastModified:
                         continue
                     print("Placeholder Event %s on calendar %s is outdated, replacing it" % (placeholderEvent.summary, calID))
                     cal['instance'].deleteEventFromCalendar(placeholderEvent)
                     # and fall through to create the placeholder event
                 # at this point, this calendar needs a placeholder
+                if cal['active'] == False: continue         # don't add anything to inactive calendars
                 newEvent = MyEvent()
                 if calID in publishDetails:
                     newEvent.createCopyOfEvent(primaryEvent.calID, primaryEvent)
