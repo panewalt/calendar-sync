@@ -14,6 +14,7 @@ class MyEvent:
         self.description=kwargs.get('description', '')
         self.start=kwargs.get('start', '')
         self.end=kwargs.get('end', '')
+        #self.blocked=kwargs.get('blocked', '')
         # now make sure dates are normalized.
         # Google dates come in as timezone-aware local datetime objects.
         # Outlook dates come in as UTC dates.

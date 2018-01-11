@@ -35,13 +35,14 @@ class GoogleCalendar:
     # credentialsFile for this calendar, stored in ~/.credentials
     # Note that the secrets file is used to create the credentials file, which is used thereafter.
     
-    def __init__(self, calID, scope=None, appName=None, secretsFile=None, credentialsFile=None):
+    def __init__(self, calID, scope=None, appName=None, secretsFile=None, credentialsFile=None, email=None):
         self.calID = calID
         if not scope: scope = 'https://www.googleapis.com/auth/calendar'      #.readonly
         if not appName: appName = "Calendar Sync"
         self.credentials = self.getCredentials(scope, appName, secretsFile, credentialsFile)
         http = self.credentials.authorize(httplib2.Http())
         self.service = discovery.build('calendar', 'v3', http=http)
+        self.email = email
         # events_list = self.get_events_list()
         
         
@@ -70,10 +71,17 @@ class GoogleCalendar:
         return credentials
 
 
+    def getAttendeeStatus(self, attendeeList, email):
+        for attendee in attendeeList:
+            if attendee['email'] == email:
+                return attendee['responseStatus']
+        return None
+        
+        
     def getEventsFromCalendar(self, daysAhead=30):
         now = datetime.utcnow().isoformat() + 'Z' # 'Z' indicates UTC time
         then = (datetime.utcnow() + timedelta(days=daysAhead)).isoformat() + 'Z'
-        #print('Getting the upcoming events for calendar %s' % self.calID)
+        print('Getting the upcoming events for calendar %s' % self.calID)
         eventResult = self.service.events().list(
             calendarId='primary', timeMin=now, timeMax=then, singleEvents=True,
             orderBy='startTime').execute()
@@ -82,8 +90,17 @@ class GoogleCalendar:
         myEventList = []
         for item in eventList:
             #print("%s: Google Event %s, start %s, end %s" % (self.calID, item['summary'], item['start'], item['end']))
-            #if 'attendees' in item:
-            #    print("Attendees: %s" % item['attendees'])
+            # look for any events on a calendar that are organized by someone else and not yet accepted.  those are already just "placeholders",
+            # so we won't create actual placeholders for them on other calendars until they've been accepted.  Events created by the owner of 
+            # the current calendar should already be considered "accepted" and so we'll block them out on other calendars.
+            if 'attendees' in item:
+                #print("Attendees: %s" % item['attendees'])
+                attendeeStatus = self.getAttendeeStatus(item['attendees'], self.email)
+                if attendeeStatus != 'accepted':
+                    if 'organizer' in item:
+                        if item['organizer']['email'] != self.email:
+                            print("Ignoring non-responded event %s from organizer %s" % (item['summary'], item['organizer']['email']))
+                            continue
             if 'dateTime' not in item['start']: continue    # skip all-day events
             #print("%s: %s" % (self.calID, item))
             event = MyEvent()
@@ -170,11 +187,11 @@ def getPrimaryEvent(eventList, calID):
 def main():
     global calendars
     calendars = {
-        'PA':  {'active': True,  'type': 'Google', 'appName':'Calendar Sync', 'secrets':'pete_client_secret.json', 'creds_file':'pete-credentials.json', 'publishDetails': ''},
-        #'MOV': {'active': False, 'type': 'Google', 'appName':'MOV Calendar Sync', 'secrets':'mov_client_secret.json', 'creds_file':'mov-credentials.json', 'publishDetails': 'PA'},
-        #'GC':  {'active': False, 'type': 'Google', 'appName':'Calendar Sync', 'secrets':'gc_client_secret.json', 'creds_file':'gc-credentials.json', 'publishDetails': 'PA,MOV'},
-        #'UL':  {'active': False, 'type': 'Outlook', 'appName':'Calendar Sync', 'creds_file': 'ul-credentials.txt', 'publishDetails': 'PA,UL2'},
-        'UL2': {'active': True,  'type': 'Google', 'appName':'Calendar Sync', 'secrets': 'ul_client_secret.json', 'creds_file':'ul-credentials.json','publishDetails': 'PA,UL'}
+        'PA':  {'active': True,  'type': 'Google', 'appName':'Calendar Sync', 'secrets':'pete_client_secret.json', 'creds_file':'pete-credentials.json', 'publishDetails': '', 'email': 'pete@anewalt.com'},
+        #'MOV': {'active': False, 'type': 'Google', 'appName':'MOV Calendar Sync', 'secrets':'mov_client_secret.json', 'creds_file':'mov-credentials.json', 'publishDetails': 'PA', 'email': 'pete@mov-ology.com'},
+        #'GC':  {'active': False, 'type': 'Google', 'appName':'Calendar Sync', 'secrets':'gc_client_secret.json', 'creds_file':'gc-credentials.json', 'publishDetails': 'PA,MOV', 'email': 'pete@geocommerce.com'},
+        #'UL':  {'active': False, 'type': 'Outlook', 'appName':'Calendar Sync', 'creds_file': 'ul-credentials.txt', 'publishDetails': 'PA,UL2', 'email': 'pete@uledger.co'},
+        'UL2': {'active': True,  'type': 'Google', 'appName':'Calendar Sync', 'secrets': 'ul_client_secret.json', 'creds_file':'ul-credentials.json','publishDetails': 'PA,UL', 'email': 'pete@uledger.co'}
         }
     totalCalendars = len(calendars)
     masterEventList = {}
@@ -184,7 +201,7 @@ def main():
         cal = calendars[calID]
         if cal['active'] == False: continue     # don't read events from inactive calendars
         if cal['type'] == 'Google':
-            cal['instance'] = GoogleCalendar(calID=calID, appName=cal['appName'], secretsFile=cal['secrets'], credentialsFile=cal['creds_file'])
+            cal['instance'] = GoogleCalendar(calID=calID, appName=cal['appName'], secretsFile=cal['secrets'], credentialsFile=cal['creds_file'], email=cal['email'])
         elif cal['type'] == "Outlook":
             cal['instance'] = OutlookCalendar(calID=calID, credentialsFile=cal['creds_file'])
         cal['eventList'] = cal['instance'].getEventsFromCalendar(daysAhead=gDaysAhead)
