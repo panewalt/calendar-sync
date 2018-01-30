@@ -113,8 +113,8 @@ class GoogleCalendar:
             event.calID = self.calID
             event.ID = item['id']
             event.summary = item['summary']
-            event.start = item['start']['dateTime']
-            event.end = item['end']['dateTime']
+            event.start = event.convertToUTC(item['start']['dateTime'])
+            event.end = event.convertToUTC(item['end']['dateTime'])
             event.lastModified = item['updated']
             if 'location' in item: event.location = item['location']
             if 'description' in item: event.description = item['description']
@@ -231,6 +231,8 @@ def main():
                 print("Identified Primary Calendar %s for Event %s" % (event.calID, event.summary))
                 primaryEventSet.add(event)
 
+        continue
+        
         if len(primaryEventSet) == 0:
             # no primary events - this means an event was deleted from the primary calendar,
             # and all the ones remaining in this timeslot are placeholders.  Delete them.
@@ -256,16 +258,21 @@ def main():
                 cal = calendars[calID]
                 #if cal['active'] == False: continue         # skip inactive calendars
                 placeholderEvent = getCalendarEvent(timeslotEvents, calID)
+                '''
                 # temporary - delete the mess I created somehow, with hundreds of duplicate events,
                 # then figure out how to not do it again
-                '''
                 while placeholderEvent and len(timeslotEvents) > 5:
                     print("Deleting Existing Placeholder Event %s on calendar %s" % (placeholderEvent.summary, calID))
                     cal['instance'].deleteEventFromCalendar(placeholderEvent)
                     timeslotEvents.remove(placeholderEvent)
                     #input("Press Enter to continue")
                     placeholderEvent = getCalendarEvent(timeslotEvents, calID)
-                '''    
+                '''
+                # check for condition where multiple events get created, & bail if we see that
+                if placeholderEvent and len(timeslotEvents) > 5:
+                    print("ERROR: too many Placeholder Events %s on calendar %s" % (placeholderEvent.summary, calID))
+                    continue
+                
                 if placeholderEvent:
                     print("Existing Placeholder Event %s on calendar %s" % (placeholderEvent.summary, calID))
                     if placeholderEvent.lastModified >= primaryEvent.lastModified:

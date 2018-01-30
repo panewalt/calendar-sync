@@ -34,10 +34,20 @@ class MyEvent:
     def convertUTCtoLocalDatetime(self, s):
         # convert a time string in UTC format: 2017-08-02T14:00:00Z
         # to locally-aware datetime string:    2017-08-02T14:00:00+00:00
-        utc = parser.parse(s)
+        dt = parser.parse(s)
         tzLocal = tz.tzlocal()
-        local = utc.astimezone(tzLocal)
+        local = dt.astimezone(tzLocal)
         dString = local.isoformat()
         return dString
 
+    def convertToUTC(self, s):
+        # convert a locally-aware datetime string:    2017-08-02T14:00:00+00:00
+        # to a time string in UTC format:             2017-08-02T14:00:00Z
+        dt = parser.parse(s)
+        tzUTC = tz.tzutc()
+        utc = dt.astimezone(tzUTC)
+        dString = utc.isoformat()   
+        #print("Input String: %s, Output: %s" % (s, dString))
+        return dString
+        
     

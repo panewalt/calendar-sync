@@ -27,7 +27,7 @@ class OutlookCalendar:
         self.getCredentials(credentialsFile)
 
     def getCredentials(self, credentialsFile):
-        homeDir = '.'	#os.path.expanduser('~')
+        homeDir = '.'   #os.path.expanduser('~')
         credentialsDir = os.path.join(homeDir, '.credentials')
         if not os.path.exists(credentialsDir):
             os.makedirs(credentialsDir)
@@ -77,8 +77,8 @@ class OutlookCalendar:
             event.ID = item['Id']
             event.summary = item['Subject']
             # Outlook dates are provided in UTC.  Convert to local-aware datetime.
-            event.start = event.convertUTCtoLocalDatetime(item['Start'])
-            event.end = event.convertUTCtoLocalDatetime(item['End'])
+            event.start = item['start']     #event.convertUTCtoLocalDatetime(item['Start'])
+            event.end = item['end']         #event.convertUTCtoLocalDatetime(item['End'])
             event.location = item['Location']['DisplayName']
             event.description = item['BodyPreview']
             event.lastModified = item['DateTimeLastModified']  #event.convertUTCtoLocalDatetime(item['DateTimeLastModified'])
