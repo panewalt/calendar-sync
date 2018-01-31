@@ -231,8 +231,6 @@ def main():
                 print("Identified Primary Calendar %s for Event %s" % (event.calID, event.summary))
                 primaryEventSet.add(event)
 
-        continue
-        
         if len(primaryEventSet) == 0:
             # no primary events - this means an event was deleted from the primary calendar,
             # and all the ones remaining in this timeslot are placeholders.  Delete them.
