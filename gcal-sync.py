@@ -91,9 +91,9 @@ class GoogleCalendar:
         for item in eventList:
             #print("%s: Google Event %s, start %s, end %s" % (self.calID, item['summary'], item['start'], item['end']))
             # if we see any events whose free/busy status is "free", don't create placeholders for those
-            if 'transparency' in item and item['transparency'] == 'transparent': 
-                print("Skipping 'free' event %s" % item['summary'])
-                continue
+            #if 'transparency' in item and item['transparency'] == 'transparent': 
+            #    print("Skipping 'free' event %s" % item['summary'])
+            #    continue
             # look for any events on a calendar that are organized by someone else and not yet accepted.  those are already just "placeholders",
             # so we won't create actual placeholders for them on other calendars until they've been accepted.  Events created by the owner of 
             # the current calendar should already be considered "accepted" and so we'll block them out on other calendars.
