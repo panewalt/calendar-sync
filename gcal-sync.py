@@ -21,7 +21,7 @@ from outlook import OutlookCalendar
 
 #import calendarList
 
-gDaysAhead = 30
+gDaysAhead = 1
     
 class GoogleCalendar:
     # class containing a Google calendar.
@@ -37,18 +37,18 @@ class GoogleCalendar:
     # credentialsFile for this calendar, stored in ~/.credentials
     # Note that the secrets file is used to create the credentials file, which is used thereafter.
     
-    def __init__(self, calID, scope=None, appName=None, calDir=None, secretsFile=None, credentialsFile=None, email=None):
+    def __init__(self, calID, scope=None, appName=None, secretsFile=None, credentialsFile=None, email=None):
         self.calID = calID
         if not scope: scope = 'https://www.googleapis.com/auth/calendar'      #.readonly
         if not appName: appName = "Calendar Sync"
-        self.credentials = self.getCredentials(scope, appName, calDir, secretsFile, credentialsFile)
+        self.credentials = self.getCredentials(scope, appName, secretsFile, credentialsFile)
         http = self.credentials.authorize(httplib2.Http())
         self.service = discovery.build('calendar', 'v3', http=http)
         self.email = email
         # events_list = self.get_events_list()
         
         
-    def getCredentials(self, scope, appName, calDir, secretsFile, credentialsFile):
+    def getCredentials(self, scope, appName, secretsFile, credentialsFile):
         """Gets valid user credentials from storage.
 
         If nothing has been stored, or if the stored credentials are invalid,
@@ -58,12 +58,10 @@ class GoogleCalendar:
             Credentials, the obtained credential.
         """
         homeDir = '.'   #os.path.expanduser('~')
-        credentialsDir = os.path.join(homeDir, calDir)  #'.credentials')
+        credentialsDir = os.path.join(homeDir, '.credentials')
         if not os.path.exists(credentialsDir):
             os.makedirs(credentialsDir)
         credentialsPath = os.path.join(credentialsDir, credentialsFile)
-        secretsPath = os.path.join(credentialsDir, secretsFile)
-        print("Getting Credentials for appName %s, calDir %s, credentialsPath %s, secretsPath %s" % (appName, calDir, credentialsPath, secretsPath))
         
         store = Storage(credentialsPath)
         credentials = store.get()
@@ -194,13 +192,7 @@ def getPrimaryEvent(eventList, calID):
     return None
     
             
-def main(argv):
-    # read calendar definitions and access info from a calendar folder, specified on the command line
-    if len(argv) < 1:
-        print("Please specify the folder where the calendar definitions can be found.")
-        exit(1)
-    calDir = argv[0]
-    sys.path.append(calDir)
+def main():
     import calendarList
     calendars = calendarList.calendarList
     totalCalendars = len(calendars)
@@ -211,9 +203,9 @@ def main(argv):
         cal = calendars[calID]
         if cal['active'] == False: continue     # don't read events from inactive calendars
         if cal['type'] == 'Google':
-            cal['instance'] = GoogleCalendar(calID=calID, calDir=calDir, appName=cal['appName'], secretsFile=cal['secrets'], credentialsFile=cal['creds_file'], email=cal['email'])
+            cal['instance'] = GoogleCalendar(calID=calID, appName=cal['appName'], secretsFile=cal['secrets'], credentialsFile=cal['creds_file'], email=cal['email'])
         elif cal['type'] == "Outlook":
-            cal['instance'] = OutlookCalendar(calID=calID, calDir=calDir, credentialsFile=cal['creds_file'])
+            cal['instance'] = OutlookCalendar(calID=calID, credentialsFile=cal['creds_file'])
         cal['eventList'] = cal['instance'].getEventsFromCalendar(daysAhead=gDaysAhead)
         eventsRetrieved = len(cal['eventList'])
         print("Calendar %s: Retrieved %d entries" % (calID, eventsRetrieved))
@@ -294,4 +286,4 @@ def main(argv):
             
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
