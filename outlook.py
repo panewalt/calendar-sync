@@ -18,7 +18,7 @@ from myevent import MyEvent
 # Once done, we can create new events in here using the local times.
 
 class OutlookCalendar:
-    def __init__(self, calID, credentialsFile=None):
+    def __init__(self, calID, calDir, credentialsFile=None):
         # Set the request parameters - this URL is the main URL for creating and deleting events
         # it also works for getting events, but I found that the calendarView function is better, because it allows dates to be specified.
         # so that one is defined below, in getEventsFromCalendar.
@@ -28,7 +28,7 @@ class OutlookCalendar:
 
     def getCredentials(self, credentialsFile):
         homeDir = '.'   #os.path.expanduser('~')
-        credentialsDir = os.path.join(homeDir, '.credentials')
+        credentialsDir = os.path.join(homeDir, calDir)  #'.credentials')
         if not os.path.exists(credentialsDir):
             os.makedirs(credentialsDir)
         credentialsPath = os.path.join(credentialsDir, credentialsFile)

@@ -62,7 +62,9 @@ class GoogleCalendar:
         if not os.path.exists(credentialsDir):
             os.makedirs(credentialsDir)
         credentialsPath = os.path.join(credentialsDir, credentialsFile)
-
+        secretsPath = os.path.join(credentialsDir, secretsFile)
+        print("Getting Credentials for appName %s, calDir %s, credentialsPath %s, secretsPath %s" % (appName, calDir, credentialsPath, secretsPath))
+        
         store = Storage(credentialsPath)
         credentials = store.get()
         if not credentials or credentials.invalid:
