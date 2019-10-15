@@ -21,7 +21,7 @@ from outlook import OutlookCalendar
 
 #import calendarList
 
-gDaysAhead = 1
+gDaysAhead = 30
     
 class GoogleCalendar:
     # class containing a Google calendar.
