@@ -3,8 +3,8 @@
 
 git pull
 
-python3 gcal-sync.py >> sync.log
+python3 gcal-sync.py pete >> pete/sync.log
 
-DUPS=`grep 'total events: 5' sync.log |wc -l`
+DUPS=`grep 'total events: 5' pete/sync.log |wc -l`
 echo Dups: $DUPS
 
