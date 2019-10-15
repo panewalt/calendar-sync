@@ -19,6 +19,8 @@ import dateutil.parser
 from myevent import MyEvent
 from outlook import OutlookCalendar
 
+#import calendarList
+
 gDaysAhead = 30
     
 class GoogleCalendar:
@@ -35,18 +37,18 @@ class GoogleCalendar:
     # credentialsFile for this calendar, stored in ~/.credentials
     # Note that the secrets file is used to create the credentials file, which is used thereafter.
     
-    def __init__(self, calID, scope=None, appName=None, secretsFile=None, credentialsFile=None, email=None):
+    def __init__(self, calID, scope=None, appName=None, calDir=None, secretsFile=None, credentialsFile=None, email=None):
         self.calID = calID
         if not scope: scope = 'https://www.googleapis.com/auth/calendar'      #.readonly
         if not appName: appName = "Calendar Sync"
-        self.credentials = self.getCredentials(scope, appName, secretsFile, credentialsFile)
+        self.credentials = self.getCredentials(scope, appName, calDir, secretsFile, credentialsFile)
         http = self.credentials.authorize(httplib2.Http())
         self.service = discovery.build('calendar', 'v3', http=http)
         self.email = email
         # events_list = self.get_events_list()
         
         
-    def getCredentials(self, scope, appName, secretsFile, credentialsFile):
+    def getCredentials(self, scope, appName, calDir, secretsFile, credentialsFile):
         """Gets valid user credentials from storage.
 
         If nothing has been stored, or if the stored credentials are invalid,
@@ -56,7 +58,7 @@ class GoogleCalendar:
             Credentials, the obtained credential.
         """
         homeDir = '.'   #os.path.expanduser('~')
-        credentialsDir = os.path.join(homeDir, '.credentials')
+        credentialsDir = os.path.join(homeDir, calDir)  #'.credentials')
         if not os.path.exists(credentialsDir):
             os.makedirs(credentialsDir)
         credentialsPath = os.path.join(credentialsDir, credentialsFile)
@@ -161,7 +163,7 @@ def addEventsToMaster(eventList, calID, masterEventList):
     return masterEventList
 
 
-def findCalendarTag(event):
+def findCalendarTag(event, calendars):
     for calID in calendars:
         tag = "<%s> " % calID
         if event.summary.startswith(tag):
@@ -190,15 +192,15 @@ def getPrimaryEvent(eventList, calID):
     return None
     
             
-def main():
-    global calendars
-    calendars = {
-        'PA':  {'active': True,  'type': 'Google', 'appName':'Calendar Sync', 'secrets':'pete_client_secret.json', 'creds_file':'pete-credentials.json', 'publishDetails': '', 'email': 'pete@anewalt.com'},
-        #'MOV': {'active': False, 'type': 'Google', 'appName':'MOV Calendar Sync', 'secrets':'mov_client_secret.json', 'creds_file':'mov-credentials.json', 'publishDetails': 'PA', 'email': 'pete@mov-ology.com'},
-        #'GC':  {'active': False, 'type': 'Google', 'appName':'Calendar Sync', 'secrets':'gc_client_secret.json', 'creds_file':'gc-credentials.json', 'publishDetails': 'PA,MOV', 'email': 'pete@geocommerce.com'},
-        #'UL':  {'active': False, 'type': 'Outlook', 'appName':'Calendar Sync', 'creds_file': 'ul-credentials.txt', 'publishDetails': 'PA,UL2', 'email': 'pete@uledger.co'},
-        'UL2': {'active': True,  'type': 'Google', 'appName':'Calendar Sync', 'secrets': 'ul_client_secret.json', 'creds_file':'ul-credentials.json','publishDetails': 'PA,UL', 'email': 'pete@uledger.co'}
-        }
+def main(argv):
+    # read calendar definitions and access info from a calendar folder, specified on the command line
+    if len(argv) < 1:
+        print("Please specify the folder where the calendar definitions can be found.")
+        exit(1)
+    calDir = argv[0]
+    sys.path.append(calDir)
+    import calendarList
+    calendars = calendarList.calendarList
     totalCalendars = len(calendars)
     masterEventList = {}
 
@@ -207,9 +209,9 @@ def main():
         cal = calendars[calID]
         if cal['active'] == False: continue     # don't read events from inactive calendars
         if cal['type'] == 'Google':
-            cal['instance'] = GoogleCalendar(calID=calID, appName=cal['appName'], secretsFile=cal['secrets'], credentialsFile=cal['creds_file'], email=cal['email'])
+            cal['instance'] = GoogleCalendar(calID=calID, calDir=calDir, appName=cal['appName'], secretsFile=cal['secrets'], credentialsFile=cal['creds_file'], email=cal['email'])
         elif cal['type'] == "Outlook":
-            cal['instance'] = OutlookCalendar(calID=calID, credentialsFile=cal['creds_file'])
+            cal['instance'] = OutlookCalendar(calID=calID, calDir=calDir, credentialsFile=cal['creds_file'])
         cal['eventList'] = cal['instance'].getEventsFromCalendar(daysAhead=gDaysAhead)
         eventsRetrieved = len(cal['eventList'])
         print("Calendar %s: Retrieved %d entries" % (calID, eventsRetrieved))
@@ -226,7 +228,7 @@ def main():
         # look at all the events in this timeslot, identify which calendars need placeholders added
         primaryEventSet = set()
         for event in timeslotEvents:
-            event.primary = not findCalendarTag(event)
+            event.primary = not findCalendarTag(event, calendars)
             if event.primary and not event.summary.startswith("Canceled event:"):
                 print("Identified Primary Calendar %s for Event %s" % (event.calID, event.summary))
                 primaryEventSet.add(event)
@@ -290,4 +292,4 @@ def main():
             
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
