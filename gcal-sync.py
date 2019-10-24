@@ -21,7 +21,7 @@ from outlook import OutlookCalendar
 
 #import calendarList
 
-gDaysAhead = 30
+gDaysAhead = 1
     
 class GoogleCalendar:
     # class containing a Google calendar.
@@ -110,7 +110,7 @@ class GoogleCalendar:
             if 'dateTime' not in item['start']:     # skip all-day events
                 print("Skipping all-day event %s" % item['summary'])
                 continue
-            #print("%s: %s" % (self.calID, item))
+            print("%s: %s" % (self.calID, item))
             event = MyEvent()
             event.calID = self.calID
             event.ID = item['id']
@@ -120,6 +120,11 @@ class GoogleCalendar:
             event.lastModified = item['updated']
             if 'location' in item: event.location = item['location']
             if 'description' in item: event.description = item['description']
+            # capture hangout data, try to add it to the new event (having trouble....)
+            if 'hangoutLink' in item: event.hangoutLink = item['hangoutLink']
+            if 'conferenceData' in item: 
+                event.conferenceData = item['conferenceData']
+                print("%s" % event.conferenceData)
             #print("Calendar: %s, Event %s, start %s, end %s, Location: %s, modified: %s" % (self.calID, event.summary, event.start, event.end, event.location, event.lastModified))
             myEventList.append(event)
         return myEventList
@@ -135,7 +140,11 @@ class GoogleCalendar:
         GCalEvent['end']['dateTime'] = event.end    #datetime.strptime(event.end, "%Y-%m-%dT%H:%M:%S")
         GCalEvent['location'] = event.location
         GCalEvent['description'] = event.description
-        event = self.service.events().insert(calendarId='primary', body=GCalEvent).execute()
+        # trying to add hangout data to new event, but it doesn't seem to work....
+        GCalEvent['hangoutLink'] = event.hangoutLink
+        GCalEvent['conferenceData'] = event.conferenceData
+        print(GCalEvent)
+        event = self.service.events().insert(calendarId='primary', conferenceDataVersion=1, body=GCalEvent).execute()
         return event
 
         
@@ -279,6 +288,7 @@ def main():
                 newEvent = MyEvent()
                 if calID in publishDetails:
                     newEvent.createCopyOfEvent(primaryEvent.calID, primaryEvent)
+                    if hasattr(newEvent, 'hangoutLink'): print("newEvent HangoutLink: %s" % newEvent.hangoutLink)
                 else:
                     newEvent.createPlaceholderEvent(primaryEvent.calID, start, end)
                 print("Adding event %s to calendar %s, timeslot %s" % (newEvent.summary, calID, timeslot))

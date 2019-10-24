@@ -14,6 +14,8 @@ class MyEvent:
         self.description=kwargs.get('description', '')
         self.start=kwargs.get('start', '')
         self.end=kwargs.get('end', '')
+        self.hangoutLink=kwargs.get('hangoutLink', '')
+        self.conferenceData=kwargs.get('conferenceData', '')
         #self.blocked=kwargs.get('blocked', '')
         # now make sure dates are normalized.
         # Google dates come in as timezone-aware local datetime objects.
@@ -27,7 +29,9 @@ class MyEvent:
 
     def createCopyOfEvent(self, calID, event):
         newSummary = "<%s> %s" % (calID, event.summary)
-        self.createEvent(ID=event.ID, summary=newSummary, location=event.location, description=event.description, start=event.start, end=event.end)
+        #print("Creating copy of event - conferenceData: %s" % event.conferenceData)
+        if hasattr(event, 'hangoutLink'): print("hangoutLink: %s" % event.hangoutLink)
+        self.createEvent(ID=event.ID, summary=newSummary, location=event.location, description=event.description, start=event.start, end=event.end, hangoutLink=event.hangoutLink, conferenceData=event.conferenceData)
         #print("Event Copied - Summary: %s, Start: %s, End: %s, Location: %s" % (self.summary, self.start, self.end, self.location))
         #return newEvent
         
